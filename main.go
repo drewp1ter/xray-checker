@@ -38,11 +38,6 @@ func main() {
 		logger.Fatal("Failed to initialize custom assets: %v", err)
 	}
 
-	geoManager := xray.NewGeoFileManager("")
-	if err := geoManager.EnsureGeoFiles(); err != nil {
-		logger.Fatal("Failed to ensure geo files: %v", err)
-	}
-
 	configFile := "xray_config.json"
 	proxyConfigs, err := subscription.InitializeConfiguration(configFile, version)
 	if err != nil {
@@ -110,6 +105,19 @@ func main() {
 			}
 
 			if pushConfig != nil {
+				if config.CLIConfig.WhitelistsMode {
+					active, err := xray.CheckWhitelistsIsActive(10)
+					if err != nil {
+						logger.Error("Error checking whitelists: %v", err)
+						return
+					} else if !active {
+						logger.Info("Whitelists are not active, skipping metrics push")
+						return
+					} else {
+						logger.Info("Whitelists are active, pushing metrics")
+					}
+			  }
+
 				if err := metrics.PushMetrics(pushConfig, registry); err != nil {
 					logger.Error("Error pushing metrics: %v", err)
 				}
@@ -118,6 +126,19 @@ func main() {
 	}
 
 	if config.CLIConfig.RunOnce {
+		if config.CLIConfig.WhitelistsMode {
+			logger.Info("Running in whitelists mode: only checking proxies that are currently working")
+			active, err := xray.CheckWhitelistsIsActive(10)
+			if err != nil {
+				logger.Error("Error checking whitelists: %v", err)
+				return
+			} else if active {
+				logger.Info("Whitelists are active, running checks")
+			} else {
+				logger.Info("Whitelists are not active")
+				return
+			}
+		}
 		runCheckIteration()
 		logger.Info("Check completed")
 		return
@@ -125,7 +146,20 @@ func main() {
 
 	checkScheduler := gocron.NewScheduler(time.UTC)
 	checkScheduler.Every(config.CLIConfig.Proxy.CheckInterval).Seconds().Do(func() {
-		runCheckIteration()
+		if config.CLIConfig.WhitelistsMode {
+			logger.Info("Running in whitelists mode: only checking proxies that are currently working")
+			active, err := xray.CheckWhitelistsIsActive(10)
+			if err != nil {
+				logger.Error("Error checking whitelists: %v", err)
+			} else if active {
+				logger.Info("Whitelists are active, running checks")
+				runCheckIteration()
+			} else {
+				logger.Info("Whitelists are not active")
+			}
+		} else {
+			runCheckIteration()
+		}
 	})
 	checkScheduler.StartAsync()
 

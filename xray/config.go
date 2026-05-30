@@ -252,6 +252,8 @@ func (g *ConfigGenerator) generateStreamSettings(proxy *models.ProxyConfig) map[
 		ss["grpcSettings"] = map[string]interface{}{
 			"serviceName": proxy.GetServiceName(),
 			"multiMode":   proxy.MultiMode,
+			"idle_timeout": 3600,
+      "health_check_timeout": 60,
 		}
 
 	case "http", "h2":

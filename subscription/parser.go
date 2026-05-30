@@ -231,47 +231,13 @@ func (p *Parser) Parse(subscriptionData string) (*ParseResult, error) {
 
 	cleanedData := p.cleanEmptyLines(rawData)
 
-	// Try batch parsing first
-	proxyConfigs := p.parseViaLibXray(cleanedData, originalData)
-
-	// If batch parsing failed, fall back to line-by-line parsing
-	if len(proxyConfigs) == 0 {
-		logger.Warn("Batch parsing failed or returned no configs, trying line-by-line parsing")
-		proxyConfigs = p.parseLineByLine(cleanedData, originalData)
-	}
+	proxyConfigs := p.parseLineByLine(cleanedData, originalData)
 
 	if len(proxyConfigs) == 0 {
 		return nil, fmt.Errorf("no valid proxy configurations found")
 	}
 
 	return &ParseResult{Configs: proxyConfigs, Name: subName}, nil
-}
-
-// parseViaLibXray attempts to parse all configs at once via libXray.
-// Returns parsed configs or nil if parsing fails.
-func (p *Parser) parseViaLibXray(cleanedData []byte, originalData map[string]*originalLinkData) []*models.ProxyConfig {
-	base64Data := base64.StdEncoding.EncodeToString(cleanedData)
-
-	resultBase64 := libXray.ConvertShareLinksToXrayJson(base64Data)
-
-	resultBytes, err := base64.StdEncoding.DecodeString(resultBase64)
-	if err != nil {
-		logger.Debug("Failed to decode libXray response: %v", err)
-		return nil
-	}
-
-	var response libXrayResponse
-	if err := json.Unmarshal(resultBytes, &response); err != nil {
-		logger.Debug("Failed to parse libXray response: %v", err)
-		return nil
-	}
-
-	if !response.Success {
-		logger.Debug("libXray batch parsing returned success=false")
-		return nil
-	}
-
-	return p.extractOutbounds(response.Data, originalData)
 }
 
 // parseLineByLine parses each config line individually, skipping broken ones.
@@ -310,6 +276,9 @@ func (p *Parser) parseLineByLine(cleanedData []byte, originalData map[string]*or
 		}
 
 		configs := p.extractOutbounds(response.Data, originalData)
+		for _, cfg := range configs {
+			cfg.OriginalData = lineBase64
+		}
 		allConfigs = append(allConfigs, configs...)
 	}
 

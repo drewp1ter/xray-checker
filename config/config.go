@@ -63,9 +63,10 @@ type CLI struct {
 		CustomAssetsPath  string `name:"web-custom-assets-path" help:"Path to custom assets directory (logo.svg, favicon.ico, custom.css, index.html)" default:"" env:"WEB_CUSTOM_ASSETS_PATH"`
 	} `embed:"" prefix:""`
 
-	Version  VersionFlag `name:"version" help:"Print version information and quit"`
-	RunOnce  bool        `name:"run-once" help:"Run one check cycle and exit" default:"false" env:"RUN_ONCE"`
-	LogLevel string      `name:"log-level" help:"Log level (debug|info|warn|error|none)" default:"info" env:"LOG_LEVEL"`
+	Version  VersionFlag 				`name:"version" help:"Print version information and quit"`
+	RunOnce  bool        				`name:"run-once" help:"Run one check cycle and exit" default:"false" env:"RUN_ONCE"`
+	LogLevel string      				`name:"log-level" help:"Log level (debug|info|warn|error|none)" default:"info" env:"LOG_LEVEL"`
+	WhitelistsMode bool         `name:"whitelists-mode" help:"Enable checking of whitelists" default:"false" env:"WHITELISTS_MODE"`
 }
 
 func (c *CLI) Validate() error {

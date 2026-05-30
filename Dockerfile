@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.25-alpine AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.26-alpine AS builder
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -41,6 +41,7 @@ RUN apk add --no-cache ca-certificates curl tzdata && \
 
 WORKDIR /app
 COPY --from=builder /usr/bin/xray-checker /usr/bin/xray-checker
+COPY ./dlc.dat ./geoip.dat /app/geo
 
 USER appuser
 

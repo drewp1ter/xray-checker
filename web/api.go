@@ -16,16 +16,17 @@ import (
 var openAPISpec []byte
 
 type ProxyInfo struct {
-	Index     int    `json:"index"`
-	StableID  string `json:"stableId"`
-	Name      string `json:"name"`
-	SubName   string `json:"subName"`
-	Server    string `json:"server"`
-	Port      int    `json:"port"`
-	Protocol  string `json:"protocol"`
-	ProxyPort int    `json:"proxyPort"`
-	Online    bool   `json:"online"`
-	LatencyMs int64  `json:"latencyMs"`
+	Index     int       `json:"index"`
+	StableID  string    `json:"stableId"`
+	Name      string    `json:"name"`
+	SubName   string    `json:"subName"`
+	Server    string    `json:"server"`
+	Port      int       `json:"port"`
+	Protocol  string    `json:"protocol"`
+	ProxyPort int       `json:"proxyPort"`
+	Online    bool      `json:"online"`
+	LatencyMs int64     `json:"latencyMs"`
+	OriginalData string `json:"originalData,omitempty"`
 }
 
 type PublicProxyInfo struct {
@@ -99,6 +100,7 @@ func toProxyInfo(proxy *models.ProxyConfig, online bool, latency time.Duration, 
 		ProxyPort: startPort + proxy.Index,
 		Online:    online,
 		LatencyMs: latency.Milliseconds(),
+		OriginalData: proxy.OriginalData,
 	}
 }
 

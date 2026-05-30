@@ -34,6 +34,7 @@ type ProxyChecker struct {
 	checkMethod     string
 	mu              sync.RWMutex
 	generation      uint64
+	inFlight        sync.Map
 }
 
 func NewProxyChecker(proxies []*models.ProxyConfig, startPort int, ipCheckURL string, ipCheckTimeout int, genMethodURL string, downloadURL string, downloadTimeout int, downloadMinSize int64, checkMethod string) *ProxyChecker {
@@ -92,6 +93,12 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 		proxy.StableID,
 	)
 
+	if _, loaded := pc.inFlight.LoadOrStore(metricKey, struct{}{}); loaded {
+    logger.Debug("%s | Check already in progress, skipping", proxy.Name)
+    return
+  }
+  defer pc.inFlight.Delete(metricKey)
+
 	isGenerationValid := func() bool {
 		if !checkGeneration {
 			return true
@@ -109,6 +116,7 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 			fmt.Sprintf("%s:%d", proxy.Server, proxy.Port),
 			proxy.Name,
 			proxy.SubName,
+			proxy.StableID,
 			0,
 		)
 		pc.currentMetrics.Store(metricKey, false)
@@ -123,6 +131,7 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 			fmt.Sprintf("%s:%d", proxy.Server, proxy.Port),
 			proxy.Name,
 			proxy.SubName,
+			proxy.StableID,
 			time.Duration(0),
 		)
 		pc.latencyMetrics.Store(metricKey, time.Duration(0))
@@ -138,13 +147,17 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 		return
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
+	transport := &http.Transport{
 			Proxy:             http.ProxyURL(proxyURLParsed),
 			DisableKeepAlives: true,
-		},
+	}
+
+	client := &http.Client{
+		Transport: transport,
 		Timeout: time.Second * time.Duration(pc.ipCheckTimeout),
 	}
+
+	defer transport.CloseIdleConnections()
 
 	var checkSuccess bool
 	var checkErr error
@@ -185,6 +198,7 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 			fmt.Sprintf("%s:%d", proxy.Server, proxy.Port),
 			proxy.Name,
 			proxy.SubName,
+			proxy.StableID,
 			1,
 		)
 		metrics.RecordProxyLatency(
@@ -192,6 +206,7 @@ func (pc *ProxyChecker) checkProxyInternal(proxy *models.ProxyConfig, expectedGe
 			fmt.Sprintf("%s:%d", proxy.Server, proxy.Port),
 			proxy.Name,
 			proxy.SubName,
+			proxy.StableID,
 			latency,
 		)
 
@@ -321,9 +336,9 @@ func (pc *ProxyChecker) ClearMetrics() {
 	pc.currentMetrics.Range(func(key, _ interface{}) bool {
 		metricKey := key.(string)
 		parts := strings.Split(metricKey, "|")
-		if len(parts) >= 4 {
-			metrics.DeleteProxyStatus(parts[0], parts[1], parts[2], parts[3])
-			metrics.DeleteProxyLatency(parts[0], parts[1], parts[2], parts[3])
+		if len(parts) >= 5 {
+			metrics.DeleteProxyStatus(parts[0], parts[1], parts[2], parts[3], parts[4])
+			metrics.DeleteProxyLatency(parts[0], parts[1], parts[2], parts[3], parts[4])
 		}
 		pc.currentMetrics.Delete(key)
 		return true
@@ -344,26 +359,31 @@ func (pc *ProxyChecker) UpdateProxies(newProxies []*models.ProxyConfig) {
 }
 
 func (pc *ProxyChecker) CheckAllProxies() {
-	if _, err := pc.GetCurrentIP(); err != nil {
-		logger.Warn("Error getting current IP: %v", err)
-		return
-	}
+    pc.mu.RLock()
+    proxiesToCheck := make([]*models.ProxyConfig, len(pc.proxies))
+    copy(proxiesToCheck, pc.proxies)
+    currentGeneration := atomic.LoadUint64(&pc.generation)
+    pc.mu.RUnlock()
 
-	pc.mu.RLock()
-	proxiesToCheck := make([]*models.ProxyConfig, len(pc.proxies))
-	copy(proxiesToCheck, pc.proxies)
-	currentGeneration := atomic.LoadUint64(&pc.generation)
-	pc.mu.RUnlock()
+    const maxConcurrent = 50
+    sem := make(chan struct{}, maxConcurrent)
 
-	var wg sync.WaitGroup
-	for _, proxy := range proxiesToCheck {
-		wg.Add(1)
-		go func(p *models.ProxyConfig, gen uint64) {
-			defer wg.Done()
-			pc.checkProxyInternal(p, gen, true)
-		}(proxy, currentGeneration)
-	}
-	wg.Wait()
+    var wg sync.WaitGroup
+    for _, proxy := range proxiesToCheck {
+			  
+        wg.Add(1)
+
+        go func(p *models.ProxyConfig, gen uint64) {
+            defer wg.Done()
+
+            sem <- struct{}{}
+            defer func() { <-sem }()
+
+            pc.checkProxyInternal(p, gen, true)
+        }(proxy, currentGeneration)
+    }
+
+    wg.Wait()
 }
 
 func (pc *ProxyChecker) GetProxyStatus(name string) (bool, time.Duration, error) {
