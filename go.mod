@@ -11,7 +11,7 @@ require (
 	github.com/xtls/xray-core v1.260327.1-0.20260509173629-1bdb488c9ec0
 )
 
-replace github.com/xtls/xray-core => github.com/drewp1ter/xray-core v0.0.0-20260529131619-22a211fb2827
+replace github.com/xtls/xray-core => github.com/drewp1ter/xray-core v0.0.0-20260601131930-0741957992c2
 
 require (
 	github.com/juju/ratelimit v1.0.2 // indirect
@@ -34,10 +34,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pion/dtls/v3 v3.1.2 // indirect
-	github.com/pion/logging v0.2.4 // indirect
-	github.com/pion/stun/v3 v3.1.2 // indirect
-	github.com/pion/transport/v4 v4.0.1 // indirect
 	github.com/pires/go-proxyproto v0.12.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -49,7 +45,6 @@ require (
 	github.com/sagernet/sing-shadowsocks v0.2.7 // indirect
 	github.com/vishvananda/netlink v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
-	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/xtls/reality v0.0.0-20260322125925-9234c772ba8f // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect

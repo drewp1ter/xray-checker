@@ -10,7 +10,7 @@
       {{ if and .IsPublic .SubscriptionName }}{{ .SubscriptionName }}{{ else
       }}Xray Checker{{ end }}
     </title>
-    <link rel="stylesheet" href="./static/tailwind.css" />
+    <link rel="stylesheet" href="./static/tailwind.css?v={{ .Version }}" />
     <link
       rel="icon"
       type="image/png"
@@ -26,9 +26,9 @@
     />
     <meta name="apple-mobile-web-app-title" content="Xray Checker" />
     <link rel="manifest" href="./static/site.webmanifest" />
-    <script defer src="./static/alpine.min.js"></script>
+    <script defer src="./static/alpine.min.js?v={{ .Version }}"></script>
     <script type="module">
-      import { polyfillCountryFlagEmojis } from "./static/country-flag-emoji-polyfill.js";
+      import { polyfillCountryFlagEmojis } from "./static/country-flag-emoji-polyfill.js?v={{ .Version }}do";
       polyfillCountryFlagEmojis();
     </script>
     <style>
@@ -603,7 +603,7 @@
       </header>
 
       <!-- Stats -->
-      <div x-show="showStats" class="grid grid-cols-4 gap-2 sm:gap-3 mb-6">
+      <div x-show="showStats" class="grid grid-cols-5 gap-2 sm:gap-3 mb-6">
         <div class="card rounded-lg p-2 sm:p-4 text-center">
           <div
             class="text-base sm:text-xl font-semibold text-primary"
@@ -637,6 +637,12 @@
             ><span class="text-xs sm:text-sm text-muted ml-0.5">ms</span>
           </div>
           <div class="text-xs text-muted mt-0.5">Avg Latency</div>
+        </div>
+        <div class="card rounded-lg p-2 sm:p-4 text-center">
+          <div class="text-base sm:text-xl font-semibold text-primary">
+            <span x-text="stats.connectionStatus">Initializing</span>
+          </div>
+          <div class="text-xs text-muted mt-0.5">Connection Status</div>
         </div>
       </div>
 
@@ -1078,7 +1084,8 @@
               total: this.proxies.length,
               online,
               offline: this.proxies.length - online,
-              avgLatency: withLatency.length ? Math.round(withLatency.reduce((s, p) => s + p.latencyMs, 0) / withLatency.length) : 0
+              avgLatency: withLatency.length ? Math.round(withLatency.reduce((s, p) => s + p.latencyMs, 0) / withLatency.length) : 0,
+              connectionStatus: "{{ .ConnectionStatus }}"
             };
           },
 

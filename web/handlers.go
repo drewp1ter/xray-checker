@@ -29,7 +29,7 @@ type EndpointInfo struct {
 	StableID   string
 }
 
-func IndexHandler(version string, proxyChecker *checker.ProxyChecker) http.HandlerFunc {
+func IndexHandler(version string, proxyChecker *checker.ProxyChecker, connectionStatus *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -63,6 +63,17 @@ func IndexHandler(version string, proxyChecker *checker.ProxyChecker) http.Handl
 			}
 		}
 
+		// whiteListsActive, err := xray.CheckWhitelistsIsActive(10)
+		// connectionStatus := "Initializing"
+
+		// if err != nil {
+		// 	connectionStatus = "No Internet"
+		// } else if whiteListsActive {
+		// 	connectionStatus = "Whitelist Active"
+		// } else {
+		// 	connectionStatus = "Whitelist Inactive"
+		// }
+
 		data := PageData{
 			Version:                    version,
 			Host:                       config.CLIConfig.Metrics.Host,
@@ -83,6 +94,7 @@ func IndexHandler(version string, proxyChecker *checker.ProxyChecker) http.Handl
 			ShowServerDetails:          showServerDetails,
 			IsPublic:                   isPublic,
 			SubscriptionName:           subscription.GetSubscriptionName(),
+			ConnectionStatus:           *connectionStatus,
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

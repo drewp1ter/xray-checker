@@ -77,7 +77,7 @@ func CheckWhitelistsIsActive(timeout float64) (bool, error) {
 	}
 
 	if quad9OK && yandexOK {
-		return false, errors.New("whitelists are not active")
+		return false, nil
 	}
 
 	if !quad9OK && !yandexOK {

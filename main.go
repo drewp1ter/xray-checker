@@ -93,6 +93,8 @@ func main() {
 		config.CLIConfig.Proxy.CheckMethod,
 	)
 
+	connectionStatus := "Initializing"
+
 	runCheckIteration := func() {
 		logger.Info("Starting proxy check iteration")
 		proxyChecker.CheckAllProxies()
@@ -146,9 +148,17 @@ func main() {
 
 	checkScheduler := gocron.NewScheduler(time.UTC)
 	checkScheduler.Every(config.CLIConfig.Proxy.CheckInterval).Seconds().Do(func() {
+		active, err := xray.CheckWhitelistsIsActive(10)
+		if err != nil {
+			connectionStatus = "No internet"
+		} else if active {
+			connectionStatus = "OK"
+		} else {
+			connectionStatus = "WL"
+		}
+
 		if config.CLIConfig.WhitelistsMode {
 			logger.Info("Running in whitelists mode: only checking proxies that are currently working")
-			active, err := xray.CheckWhitelistsIsActive(10)
 			if err != nil {
 				logger.Error("Error checking whitelists: %v", err)
 			} else if active {
@@ -209,14 +219,14 @@ func main() {
 	protectedHandler.Handle("/api/v1/proxies/", web.APIProxyHandler(proxyChecker, config.CLIConfig.Xray.StartPort))
 	protectedHandler.Handle("/api/v1/proxies", web.APIProxiesHandler(proxyChecker, config.CLIConfig.Xray.StartPort))
 	protectedHandler.Handle("/api/v1/config", web.APIConfigHandler(proxyChecker))
-	protectedHandler.Handle("/api/v1/status", web.APIStatusHandler(proxyChecker))
+	protectedHandler.Handle("/api/v1/status", web.APIStatusHandler(proxyChecker, &connectionStatus))
 	protectedHandler.Handle("/api/v1/system/info", web.APISystemInfoHandler(version, startTime))
 	protectedHandler.Handle("/api/v1/system/ip", web.APISystemIPHandler(proxyChecker))
 	protectedHandler.Handle("/api/v1/docs", web.APIDocsHandler())
 	protectedHandler.Handle("/api/v1/openapi.yaml", web.APIOpenAPIHandler())
 
 	if config.CLIConfig.Web.Public {
-		mux.Handle("/", web.IndexHandler(version, proxyChecker))
+		mux.Handle("/", web.IndexHandler(version, proxyChecker, &connectionStatus))
 		mux.Handle("/config/", web.ConfigStatusHandler(proxyChecker))
 		middlewareHandler := web.BasicAuthMiddleware(
 			config.CLIConfig.Metrics.Username,
@@ -225,14 +235,14 @@ func main() {
 		mux.Handle("/metrics", middlewareHandler)
 		mux.Handle("/api/", middlewareHandler)
 	} else if config.CLIConfig.Metrics.Protected {
-		protectedHandler.Handle("/", web.IndexHandler(version, proxyChecker))
+		protectedHandler.Handle("/", web.IndexHandler(version, proxyChecker, &connectionStatus))
 		middlewareHandler := web.BasicAuthMiddleware(
 			config.CLIConfig.Metrics.Username,
 			config.CLIConfig.Metrics.Password,
 		)(protectedHandler)
 		mux.Handle("/", middlewareHandler)
 	} else {
-		protectedHandler.Handle("/", web.IndexHandler(version, proxyChecker))
+		protectedHandler.Handle("/", web.IndexHandler(version, proxyChecker, &connectionStatus))
 		mux.Handle("/", protectedHandler)
 	}
 

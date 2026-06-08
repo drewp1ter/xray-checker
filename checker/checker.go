@@ -365,7 +365,7 @@ func (pc *ProxyChecker) CheckAllProxies() {
     currentGeneration := atomic.LoadUint64(&pc.generation)
     pc.mu.RUnlock()
 
-    const maxConcurrent = 50
+    const maxConcurrent = 20
     sem := make(chan struct{}, maxConcurrent)
 
     var wg sync.WaitGroup

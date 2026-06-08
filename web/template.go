@@ -52,6 +52,7 @@ type PageData struct {
 	ShowServerDetails          bool
 	IsPublic                   bool
 	SubscriptionName           string
+	ConnectionStatus           string
 }
 
 func RenderIndex(w io.Writer, data PageData) error {
