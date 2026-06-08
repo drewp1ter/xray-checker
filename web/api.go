@@ -41,6 +41,7 @@ type StatusResponse struct {
 	Online       int   `json:"online"`
 	Offline      int   `json:"offline"`
 	AvgLatencyMs int64 `json:"avgLatencyMs"`
+	ConnectionStatus string `json:"connectionStatus"`
 }
 
 type ConfigResponse struct {
@@ -193,7 +194,7 @@ func APIProxyHandler(proxyChecker *checker.ProxyChecker, startPort int) http.Han
 // @Produce json
 // @Success 200 {object} StatusResponse
 // @Router /api/v1/status [get]
-func APIStatusHandler(proxyChecker *checker.ProxyChecker) http.HandlerFunc {
+func APIStatusHandler(proxyChecker *checker.ProxyChecker, connectionStatus *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		proxies := proxyChecker.GetProxies()
 
@@ -224,6 +225,7 @@ func APIStatusHandler(proxyChecker *checker.ProxyChecker) http.HandlerFunc {
 			Online:       online,
 			Offline:      offline,
 			AvgLatencyMs: avgLatency,
+			ConnectionStatus: *connectionStatus,
 		})
 	}
 }
