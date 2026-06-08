@@ -152,9 +152,9 @@ func main() {
 		if err != nil {
 			connectionStatus = "No internet"
 		} else if active {
-			connectionStatus = "OK"
-		} else {
 			connectionStatus = "WL"
+		} else {
+			connectionStatus = "OK"
 		}
 
 		if config.CLIConfig.WhitelistsMode {
